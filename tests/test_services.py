@@ -16,13 +16,13 @@ from homeassistant.components.button import SERVICE_PRESS
 from homeassistant.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID, CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.lydbro.const import DOMAIN
 
 from .fake_server import FakeLydbroServer
+from .registry import lydbro_device
 
 
 async def _setup(hass: HomeAssistant, fake_server: FakeLydbroServer) -> tuple[MockConfigEntry, str]:
@@ -42,7 +42,7 @@ async def _setup(hass: HomeAssistant, fake_server: FakeLydbroServer) -> tuple[Mo
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
 
-    device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, "aa:bb:cc:dd:ee:ff")})
+    device = lydbro_device(hass, entry.entry_id)
     assert device is not None
     return entry, device.id
 

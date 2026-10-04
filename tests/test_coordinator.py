@@ -31,6 +31,7 @@ from custom_components.lydbro.const import (
 from custom_components.lydbro.coordinator import LydbroCoordinator
 
 from .fake_server import FakeLydbroServer
+from .registry import lydbro_device
 
 
 async def _setup(
@@ -152,15 +153,11 @@ async def test_button_press_fires_lydbro_button_bus_event(
     hass: HomeAssistant, fake_server: FakeLydbroServer
 ) -> None:
     """button_press frame → lydbro_button HA event carrying the HA device_id."""
-    await _setup(hass, fake_server)
+    entry, _ = await _setup(hass, fake_server)
 
     # Look up the HA registry id for the device - that's what the
     # coordinator stamps into event data.
-    from homeassistant.helpers import device_registry as dr
-
-    ha_device_id = (
-        dr.async_get(hass).async_get_device(identifiers={(DOMAIN, "aa:bb:cc:dd:ee:ff")}).id
-    )
+    ha_device_id = lydbro_device(hass, entry.entry_id).id
 
     captured: list[Event] = []
 
@@ -179,6 +176,33 @@ async def test_button_press_fires_lydbro_button_bus_event(
     assert event.data["name"] == "Play"
     assert event.data["kind"] == "click"
     assert event.data["mode"] == "MUSIC"
+
+
+async def test_ha_device_id_prefers_entry_scoped_lookup(
+    hass: HomeAssistant, fake_server: FakeLydbroServer, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """On HA >= 2026.8 the lookup goes through async_get_device_by_identifier.
+
+    The pinned test venv runs an older HA that lacks the method, so the
+    fallback path is covered by every other test; here we graft the
+    method onto the registry (replacing it on newer HA) to pin the
+    preferred path and its arguments.
+    """
+    from homeassistant.helpers import device_registry as dr
+
+    entry, coordinator = await _setup(hass, fake_server)
+    device = lydbro_device(hass, entry.entry_id)
+    registry = dr.async_get(hass)
+    calls: list[tuple[tuple[str, str], str]] = []
+
+    def _by_identifier(identifier: tuple[str, str], config_entry_id: str):
+        calls.append((identifier, config_entry_id))
+        return device
+
+    monkeypatch.setattr(registry, "async_get_device_by_identifier", _by_identifier, raising=False)
+
+    assert coordinator._ha_device_id() == device.id
+    assert calls == [((DOMAIN, "aa:bb:cc:dd:ee:ff"), entry.entry_id)]
 
 
 async def test_menu_selection_fires_lydbro_menu_bus_event(

@@ -17,7 +17,6 @@ from homeassistant.components import automation
 from homeassistant.components.device_automation import DeviceAutomationType
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import device_registry as dr
 from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
@@ -28,6 +27,7 @@ from pytest_homeassistant_custom_component.common import (
 from custom_components.lydbro.const import DOMAIN
 
 from .fake_server import FakeLydbroServer
+from .registry import lydbro_device
 
 
 async def _setup_and_device_id(hass: HomeAssistant, fake_server: FakeLydbroServer) -> str:
@@ -45,7 +45,7 @@ async def _setup_and_device_id(hass: HomeAssistant, fake_server: FakeLydbroServe
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
-    device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, "aa:bb:cc:dd:ee:ff")})
+    device = lydbro_device(hass, entry.entry_id)
     assert device is not None
     return device.id
 

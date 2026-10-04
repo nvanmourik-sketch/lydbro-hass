@@ -16,7 +16,6 @@ from __future__ import annotations
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -24,6 +23,7 @@ from custom_components.lydbro.const import DOMAIN
 from custom_components.lydbro.coordinator import LydbroCoordinator
 
 from .fake_server import FakeLydbroServer
+from .registry import lydbro_device
 
 
 async def _setup_entry(hass: HomeAssistant, fake_server: FakeLydbroServer) -> MockConfigEntry:
@@ -62,8 +62,7 @@ async def test_setup_loads_coordinator_and_entities(
     assert coordinator.state["eth_up"] is True
 
     # Device registry should have the Lydbro One registered via DeviceInfo.
-    device_reg = dr.async_get(hass)
-    device = device_reg.async_get_device(identifiers={(DOMAIN, "aa:bb:cc:dd:ee:ff")})
+    device = lydbro_device(hass, entry.entry_id)
     assert device is not None
     assert device.manufacturer == "Lydbro"
 

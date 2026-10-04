@@ -162,7 +162,14 @@ class LydbroCoordinator:
         look up lazily on every button press rather than caching.
         """
         registry = dr.async_get(self.hass)
-        device = registry.async_get_device(identifiers={(DOMAIN, self.device_id)})
+        identifier = (DOMAIN, self.device_id)
+        # HA 2026.8 added a config-entry-scoped lookup; async_get_device is
+        # deprecated from 2026.9 and removed in 2027.8. Drop the fallback
+        # once the minimum supported HA version is >= 2026.8.
+        if hasattr(registry, "async_get_device_by_identifier"):
+            device = registry.async_get_device_by_identifier(identifier, self.entry.entry_id)
+        else:
+            device = registry.async_get_device(identifiers={identifier})
         return device.id if device else None
 
     # ------------------------------------------------------------------
